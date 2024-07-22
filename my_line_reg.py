@@ -25,6 +25,11 @@ class MyLineReg():
                 if x == log_param:
                     print(f"{x} | loss: {cost}")
                     log_param = log_param + verbose
+                    
+    def predict(self, X):
+        X = np.hstack([np.ones((X.shape[0],1)), X])
+        y_pred = np.dot(X, self.weights)
+        return y_pred
     
     def get_coef(self):
         return self.weights[1:]
