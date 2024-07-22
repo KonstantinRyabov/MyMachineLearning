@@ -10,21 +10,21 @@ class MyLineReg():
         y = y.to_numpy()
         
         X = np.hstack([np.ones((X.shape[0],1)), X])
-        self.weights = np.ones((X.shape[1], 1))
+        self.weights = np.ones(X.shape[1])
         
         log_param = verbose
-        current_weights = self.weights
-        for x in range(self.n_iter):
-            y_pred = np.dot(X, current_weights)
-            loss = np.mean((y_pred - y) ** 2)
-            grad = 2 * np.dot(X.T, (y_pred - y)) / np.size(y)
-            current_weights = current_weights - self.learning_rate * grad
+        for x in range(0,self.n_iter):
+            y_pred = np.dot(X, self.weights)
+            loss = y_pred - y
+            m = np.size(y)
+            cost = np.sum(loss ** 2) / m
+            grad = 2 * np.dot(X.T, loss) / m
+            self.weights = self.weights - self.learning_rate * grad
             if(verbose != 0):
-                print(f"start | loss: {loss}")
+                print(f"start | loss: {cost}")
                 if x == log_param:
-                    print(f"{x} | loss: {loss}")
+                    print(f"{x} | loss: {cost}")
                     log_param = log_param + verbose
-        self.weights = current_weights
     
     def get_coef(self):
         return self.weights[1:]
