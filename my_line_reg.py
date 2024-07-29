@@ -1,11 +1,14 @@
 import numpy as np
 
 class MyLineReg():
-    def __init__(self, n_iter, learning_rate, metric = ''):
+    def __init__(self, n_iter, learning_rate, l1_coef, l2_coef, metric = '', reg = ''):
         self.n_iter = n_iter
         self.learning_rate = learning_rate
-        self.weights = []
+        self.l1_coef = l1_coef
+        self.l2_coef = l2_coef
         self.metric = metric
+        self.reg = reg
+        self.weights = []
         self.result_metric = 0
         
     def __get_metrics(self, y, loss, norm, cost, m):
@@ -27,20 +30,30 @@ class MyLineReg():
         X = np.hstack([np.ones((X.shape[0],1)), X])
         self.weights = np.ones(X.shape[1])
         
+            
         log_param = verbose
-        for x in range(0,self.n_iter + 1):
+        for x in range(0,self.n_iter):
             y_pred = np.dot(X, self.weights)
             loss = y_pred - y 
             norm = y - np.mean(y)
             m = np.size(y)
+            
+            l1_grad = self.l1_coef * np.sum(np.sign(self.weights))
+            l2_grad = self.l2_coef * 2 * np.sum(self.weights)
+            elasticnet_grad = l1_grad + l2_grad
+        
+            l_grad = 0
+            if(self.reg == 'l1'):
+                l_grad = l1_grad
+            elif(self.reg == 'l2'):
+                l_grad = l2_grad
+            elif(self.reg == 'elasticnet'):
+                l_grad = elasticnet_grad
+            
             cost = np.sum(loss ** 2) / m
             self.__get_metrics(y, loss, norm, cost, m)
             
-            
-            if(x == self.n_iter + 1): 
-                break
-            
-            grad = 2 * np.dot(X.T, loss) / m
+            grad = 2 * np.dot(X.T, loss) / m + l_grad
             self.weights = self.weights - self.learning_rate * grad
             
             if(verbose != 0):
