@@ -1,13 +1,13 @@
 import numpy as np
 
 class MyLineReg():
-    def __init__(self, n_iter, learning_rate, l1_coef, l2_coef, metric = '', reg = ''):
+    def __init__(self, n_iter, learning_rate):
         self.n_iter = n_iter
         self.learning_rate = learning_rate
-        self.l1_coef = l1_coef
-        self.l2_coef = l2_coef
-        self.metric = metric
-        self.reg = reg
+        self.l1_coef = 0
+        self.l2_coef = 0
+        self.metric = 0
+        self.reg = ''
         self.weights = []
         self.result_metric = 0
         
@@ -32,7 +32,7 @@ class MyLineReg():
         
             
         log_param = verbose
-        for x in range(0,self.n_iter):
+        for iter in range(1, self.n_iter + 1):
             y_pred = np.dot(X, self.weights)
             loss = y_pred - y 
             norm = y - np.mean(y)
@@ -54,7 +54,8 @@ class MyLineReg():
             self.__get_metrics(y, loss, norm, cost, m)
             
             grad = 2 * np.dot(X.T, loss) / m + l_grad
-            self.weights = self.weights - self.learning_rate * grad
+            learning_rate  = self.learning_rate if(isinstance(self.learning_rate, float)) else self.learning_rate(iter)
+            self.weights = self.weights - learning_rate * grad
             
             if(verbose != 0):
                 if self.metric == '':
@@ -62,11 +63,11 @@ class MyLineReg():
                 else:
                     print(f"start | loss: {cost} | {self.metric}: {self.result_metric}")
                 
-                if x == log_param:
+                if iter == log_param:
                     if self.metric == '':
-                        print(f"{x} | loss: {cost}")
+                        print(f"{iter} | loss: {cost}")
                     else:
-                        print(f"{x} | loss: {cost} | {self.metric}: {self.result_metric}")
+                        print(f"{iter} | loss: {cost} | {self.metric}: {self.result_metric}")
                     log_param = log_param + verbose
 
     def predict(self, X):
