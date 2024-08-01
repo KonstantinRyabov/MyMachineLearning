@@ -1,13 +1,16 @@
 import numpy as np
+import random
 
 class MyLineReg():
-    def __init__(self, n_iter, learning_rate):
+    def __init__(self, n_iter, learning_rate, sgd_sample = None, random_state = 42, l1_coef = 0, l2_coef = 0, metric = '', reg = ''):
         self.n_iter = n_iter
         self.learning_rate = learning_rate
-        self.l1_coef = 0
-        self.l2_coef = 0
-        self.metric = 0
-        self.reg = ''
+        self.l1_coef = l1_coef
+        self.l2_coef = l2_coef
+        self.metric = metric
+        self.reg = reg
+        self.random_state = random_state
+        self.sgd_sample = sgd_sample
         self.weights = []
         self.result_metric = 0
         
@@ -24,19 +27,30 @@ class MyLineReg():
             self.result_metric = 1 - np.sum(loss ** 2) / np.sum(norm ** 2)
 
     def fit(self, X, y, verbose = 0):
+        random.seed(self.random_state)
         X = X.to_numpy()
-        y = y.to_numpy()
-        
+        y_all = y.to_numpy()
+        rows = X.shape[0]
         X = np.hstack([np.ones((X.shape[0],1)), X])
         self.weights = np.ones(X.shape[1])
         
-            
+        
         log_param = verbose
         for iter in range(1, self.n_iter + 1):
-            y_pred = np.dot(X, self.weights)
-            loss = y_pred - y 
-            norm = y - np.mean(y)
-            m = np.size(y)
+
+            if(self.sgd_sample is not None):
+                if(isinstance(self.sgd_sample, float)):
+                    sample_rows_idx = random.sample(range(X.shape[0]), round(rows * self.sgd_sample))
+                    X_grad = X[sample_rows_idx,:]
+                    y = y_all[sample_rows_idx]
+                else:
+                    sample_rows_idx = random.sample(range(X.shape[0]), self.sgd_sample)
+                    X_grad = X[sample_rows_idx,:]
+                    y = y_all[sample_rows_idx]
+            else:
+                X_grad = X
+                y = y_all
+            
             
             l1_grad = self.l1_coef * np.sum(np.sign(self.weights))
             l2_grad = self.l2_coef * 2 * np.sum(self.weights)
@@ -50,10 +64,18 @@ class MyLineReg():
             elif(self.reg == 'elasticnet'):
                 l_grad = elasticnet_grad
             
-            cost = np.sum(loss ** 2) / m
-            self.__get_metrics(y, loss, norm, cost, m)
+            y_pred_all = np.dot(X, self.weights)
+            loss_all = y_pred_all - y_all
+            norm = y_all - np.mean(y_all)
+            m_all = np.size(y_all)
+            cost = np.sum(loss_all ** 2) / m_all
+            self.__get_metrics(y_all, loss_all, norm, cost, m_all)
             
-            grad = 2 * np.dot(X.T, loss) / m + l_grad
+            y_pred = np.dot(X_grad, self.weights)
+            m = np.size(y)
+            loss = y_pred - y
+            
+            grad = 2 * np.dot(X_grad.T, loss) / m + l_grad
             learning_rate  = self.learning_rate if(isinstance(self.learning_rate, float)) else self.learning_rate(iter)
             self.weights = self.weights - learning_rate * grad
             
