@@ -31,6 +31,19 @@ class MyLogReg():
     
     def get_coef(self):
         return self.weights[1:]
+    
+    def predict_proba(self, X):
+        X = np.hstack([np.ones((X.shape[0],1)), X])
+        z = np.dot(X, self.weights) * -1
+        y_pred = 1 / (1 + np.exp(z))
+        return y_pred
+    
+    def predict(self, X):
+        X = np.hstack([np.ones((X.shape[0],1)), X])
+        z = np.dot(X, self.weights) * -1
+        y_pred = 1 / (1 + np.exp(z))
+        y_pred_class = np.round(y_pred, dtype = np.integer).astype(int)
+        return y_pred_class
         
         
     def __str__(self):  
