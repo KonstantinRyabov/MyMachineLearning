@@ -8,17 +8,47 @@ class MyLogReg():
         self.weights = []
         self.result_metric = 0
         
-    def __get_metrics(self, posotive, n):
+    def __binary_clf_curve(self, y_true, y_score):
+    
+        desc_score_indices = np.argsort(y_score)[::-1]
+        y_score = y_score[desc_score_indices]
+        y_true = y_true[desc_score_indices]
+        
+        distinct_indices = np.where(np.diff(y_score))[0]
+        end = np.array([y_true.size - 1])
+        
+        threshold_indices = np.hstack((distinct_indices, end))
+        thresholds = y_score[threshold_indices]
+        
+        tps = np.cumsum(y_true)[threshold_indices]
+        fps = (1 + threshold_indices) - tps
+        
+        return tps, fps, thresholds
+    
+    def __roc_auc_score(self, y_true, y_score):
+        tps, fps, _ = self.__binary_clf_curve(y_true, y_score)
+        tpr = tps / tps[-1]
+        fpr = fps / fps[-1]
+
+        zero = np.array([0])
+        tpr_diff = np.hstack((np.diff(tpr), zero))
+        fpr_diff = np.hstack((np.diff(fpr), zero))
+        auc = np.dot(tpr, fpr_diff) + np.dot(tpr_diff, fpr_diff) / 2
+        return auc
+        
+    def __get_metrics(self, y_pred, y_pred_class, truepos, falseneg, allpos, alltrue, n):
         if(self.metric == 'accuracy'):
-            self.result_metric = posotive / n
-        #elif(self.metric == 'precision'):
-            
-        #elif(self.metric == 'recall'):
-            
-        #elif(self.metric == 'f1'):
-            
-        #elif(self.metric == 'roc_auc'):
-            
+            self.result_metric = alltrue / n
+        elif(self.metric == 'precision'):
+            self.result_metric =  truepos / allpos
+        elif(self.metric == 'recall'):
+            self.result_metric = truepos / (truepos + falseneg)
+        elif(self.metric == 'f1'):
+            precision = truepos / allpos
+            recall = truepos / (truepos + falseneg)
+            self.result_metric = 2 * precision * recall / (precision + recall)
+        elif(self.metric == 'roc_auc'):
+            self.result_metric = self.__roc_auc_score(y_pred_class, np.round(y_pred, 10))
     
     def fit(self, X, y, verbose = 0):
         X = X.to_numpy()
@@ -35,8 +65,11 @@ class MyLogReg():
             y_pred_class = np.round(y_pred).astype(int)
             loss = y_pred - y
             n = np.size(y)
-            positive = np.sum(np.where(y == y_pred_class, 1, 0))
-            self.__get_metrics(positive, n)
+            alltrue = np.sum(np.where(y == y_pred_class, 1, 0))
+            allpos = np.sum(np.where(y_pred_class == 1, 1, 0))
+            truepos = np.sum(np.where((y_pred_class == 1) & (y == y_pred_class), 1, 0))
+            falseneg = np.sum(np.where((y_pred_class == 0) & (y != y_pred_class), 1, 0))
+            self.__get_metrics(y_pred, y_pred_class, truepos, falseneg, allpos, alltrue, n)
             
             if(x == self.n_iter + 1):
                 break
