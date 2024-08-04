@@ -1,10 +1,13 @@
 import numpy as np
 
 class MyLogReg():
-    def __init__(self, n_iter, learning_rate, metric = None):
+    def __init__(self, n_iter, learning_rate, metric = None, reg = None, l1_coef = 0, l2_coef = 0):
         self.n_iter = n_iter
         self.learning_rate = learning_rate
-        self.metric = metric 
+        self.metric = metric
+        self.reg = reg
+        self.l1_coef = l1_coef
+        self.l2_coef = l2_coef
         self.weights = []
         self.result_metric = 0
         
@@ -59,7 +62,7 @@ class MyLogReg():
         self.weights = np.ones(X.shape[1])
         
         log_param = verbose
-        for x in range(0,self.n_iter + 1):
+        for x in range(0,self.n_iter):
             z = np.dot(X, self.weights) * -1
             y_pred = 1 / (1 + np.exp(z))
             y_pred_class = np.round(y_pred).astype(int)
@@ -71,11 +74,20 @@ class MyLogReg():
             falseneg = np.sum(np.where((y_pred_class == 0) & (y != y_pred_class), 1, 0))
             self.__get_metrics(y_pred, y_pred_class, truepos, falseneg, allpos, alltrue, n)
             
-            if(x == self.n_iter + 1):
-                break
+            l1_grad = self.l1_coef * np.sign(self.weights)
+            l2_grad = self.l2_coef * 2 * self.weights
+            elasticnet_grad = l1_grad + l2_grad
+        
+            l_grad = 0
+            if(self.reg == 'l1'):
+                l_grad = l1_grad
+            elif(self.reg == 'l2'):
+                l_grad = l2_grad
+            elif(self.reg == 'elasticnet'):
+                l_grad = elasticnet_grad
             
             cost = -1 * np.sum(y * np.log(y_pred + eps) + (1 - y) * np.log(1 - y_pred + eps)) / n
-            grad = np.dot(X.T, loss) * 1 / n
+            grad = np.dot(X.T, loss) * 1 / n + l_grad
             self.weights = self.weights - self.learning_rate * grad
             
             if(verbose != 0):
