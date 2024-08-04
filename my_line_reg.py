@@ -52,8 +52,8 @@ class MyLineReg():
                 y = y_all
             
             
-            l1_grad = self.l1_coef * np.sum(np.sign(self.weights))
-            l2_grad = self.l2_coef * 2 * np.sum(self.weights)
+            l1_grad = self.l1_coef * np.sign(self.weights)
+            l2_grad = self.l2_coef * 2 * self.weights
             elasticnet_grad = l1_grad + l2_grad
         
             l_grad = 0
