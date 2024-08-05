@@ -34,7 +34,6 @@ class MyLineReg():
         X = np.hstack([np.ones((X.shape[0],1)), X])
         self.weights = np.ones(X.shape[1])
         
-        
         log_param = verbose
         for iter in range(1, self.n_iter + 1):
 
@@ -51,7 +50,7 @@ class MyLineReg():
                 X_grad = X
                 y = y_all
             
-            
+            # регуляризация
             l1_grad = self.l1_coef * np.sign(self.weights)
             l2_grad = self.l2_coef * 2 * self.weights
             elasticnet_grad = l1_grad + l2_grad
@@ -69,16 +68,19 @@ class MyLineReg():
             norm = y_all - np.mean(y_all)
             m_all = np.size(y_all)
             cost = np.sum(loss_all ** 2) / m_all
+            # метрики
             self.__get_metrics(y_all, loss_all, norm, cost, m_all)
             
             y_pred = np.dot(X_grad, self.weights)
             m = np.size(y)
             loss = y_pred - y
             
+            # градиент
             grad = 2 * np.dot(X_grad.T, loss) / m + l_grad
             learning_rate  = self.learning_rate if(isinstance(self.learning_rate, float)) else self.learning_rate(iter)
             self.weights = self.weights - learning_rate * grad
             
+            # логи
             if(verbose != 0):
                 if self.metric == '':
                     print(f"start | loss: {cost}")
