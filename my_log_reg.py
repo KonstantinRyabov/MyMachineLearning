@@ -49,7 +49,7 @@ class MyLogReg():
         self.weights = np.ones(X.shape[1])
         
         log_param = verbose
-        for x in range(0,self.n_iter):
+        for iter in range(1,self.n_iter + 1):
             # подсказываем значение
             z = np.dot(X, self.weights) * -1
             y_pred = 1 / (1 + np.exp(z))
@@ -80,7 +80,8 @@ class MyLogReg():
             # функция потерь и градиент
             cost = -1 * np.sum(y * np.log(y_pred + eps) + (1 - y) * np.log(1 - y_pred + eps)) / n
             grad = np.dot(X.T, loss) * 1 / n + l_grad
-            self.weights = self.weights - self.learning_rate * grad
+            learning_rate  = self.learning_rate if(isinstance(self.learning_rate, float)) else self.learning_rate(iter)
+            self.weights = self.weights - learning_rate * grad
             
             # логи
             if(verbose != 0):
