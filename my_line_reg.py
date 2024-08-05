@@ -31,7 +31,9 @@ class MyLineReg():
         X = X.to_numpy()
         y_all = y.to_numpy()
         rows = X.shape[0]
+        # добавляем вектор единиц слева
         X = np.hstack([np.ones((X.shape[0],1)), X])
+        # инициализация весов
         self.weights = np.ones(X.shape[1])
         
         log_param = verbose

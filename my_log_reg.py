@@ -44,13 +44,14 @@ class MyLogReg():
         X = X.to_numpy()
         y = y.to_numpy()
         eps = 1e-15
-        
+        # добавляем вектор единиц слева
         X = np.hstack([np.ones((X.shape[0],1)), X])
+        # инициализация весов
         self.weights = np.ones(X.shape[1])
         
         log_param = verbose
         for iter in range(1,self.n_iter + 1):
-            # подсказываем значение
+            # предсказываем значение значение
             z = np.dot(X, self.weights) * -1
             y_pred = 1 / (1 + np.exp(z))
             y_pred_class = np.round(y_pred).astype(int)
