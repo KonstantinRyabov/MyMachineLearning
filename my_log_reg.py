@@ -11,33 +11,6 @@ class MyLogReg():
         self.weights = []
         self.result_metric = 0
         
-    def __binary_clf_curve(self, y_true, y_score):
-    
-        desc_score_indices = np.argsort(y_score)[::-1]
-        y_score = y_score[desc_score_indices]
-        y_true = y_true[desc_score_indices]
-        
-        distinct_indices = np.where(np.diff(y_score))[0]
-        end = np.array([y_true.size - 1])
-        
-        threshold_indices = np.hstack((distinct_indices, end))
-        thresholds = y_score[threshold_indices]
-        
-        tps = np.cumsum(y_true)[threshold_indices]
-        fps = (1 + threshold_indices) - tps
-        
-        return tps, fps, thresholds
-    
-    def __roc_auc_score(self, y_true, y_score):
-        tps, fps, _ = self.__binary_clf_curve(y_true, y_score)
-        tpr = tps / tps[-1]
-        fpr = fps / fps[-1]
-
-        zero = np.array([0])
-        tpr_diff = np.hstack((np.diff(tpr), zero))
-        fpr_diff = np.hstack((np.diff(fpr), zero))
-        auc = np.dot(tpr, fpr_diff) + np.dot(tpr_diff, fpr_diff) / 2
-        return auc
         
     def __get_metrics(self, y_pred, y_pred_class, truepos, falseneg, allpos, alltrue, n):
         if(self.metric == 'accuracy'):
@@ -51,7 +24,21 @@ class MyLogReg():
             recall = truepos / (truepos + falseneg)
             self.result_metric = 2 * precision * recall / (precision + recall)
         elif(self.metric == 'roc_auc'):
-            self.result_metric = self.__roc_auc_score(y_pred_class, np.round(y_pred, 10))
+            desc_score_indices = np.argsort(y_pred)[::-1]
+            y_pred = np.round(y_pred[desc_score_indices], 10)
+            y_pred_class = y_pred_class[desc_score_indices]
+            pos = np.sum(y_pred_class == 1)
+            neg = np.sum(y_pred_class == 0)
+
+            pos_class = y_pred[y_pred_class == 1]
+            neg_class = y_pred[y_pred_class == 0]
+
+            total = 0
+            for score in neg_class:
+                higher = (pos_class > score).sum()
+                equal = (pos_class == score).sum()
+                total += higher + 0.5 * equal
+            self.result_metric = total / (neg * pos)
     
     def fit(self, X, y, verbose = 0):
         X = X.to_numpy()
@@ -63,17 +50,21 @@ class MyLogReg():
         
         log_param = verbose
         for x in range(0,self.n_iter):
+            # подсказываем значение
             z = np.dot(X, self.weights) * -1
             y_pred = 1 / (1 + np.exp(z))
             y_pred_class = np.round(y_pred).astype(int)
             loss = y_pred - y
             n = np.size(y)
+            
+            # метрики
             alltrue = np.sum(np.where(y == y_pred_class, 1, 0))
             allpos = np.sum(np.where(y_pred_class == 1, 1, 0))
             truepos = np.sum(np.where((y_pred_class == 1) & (y == y_pred_class), 1, 0))
             falseneg = np.sum(np.where((y_pred_class == 0) & (y != y_pred_class), 1, 0))
             self.__get_metrics(y_pred, y_pred_class, truepos, falseneg, allpos, alltrue, n)
             
+            # регуляризация
             l1_grad = self.l1_coef * np.sign(self.weights)
             l2_grad = self.l2_coef * 2 * self.weights
             elasticnet_grad = l1_grad + l2_grad
@@ -86,10 +77,12 @@ class MyLogReg():
             elif(self.reg == 'elasticnet'):
                 l_grad = elasticnet_grad
             
+            # функция потерь и градиент
             cost = -1 * np.sum(y * np.log(y_pred + eps) + (1 - y) * np.log(1 - y_pred + eps)) / n
             grad = np.dot(X.T, loss) * 1 / n + l_grad
             self.weights = self.weights - self.learning_rate * grad
             
+            # логи
             if(verbose != 0):
                 if self.metric is None:
                     print(f"start | loss: {cost}")
