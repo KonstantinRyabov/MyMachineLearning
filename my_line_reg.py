@@ -38,7 +38,8 @@ class MyLineReg():
         
         log_param = verbose
         for iter in range(1, self.n_iter + 1):
-
+            
+            # для формирования мини-пакет(Стохастический градиентный спуск)
             if(self.sgd_sample is not None):
                 if(isinstance(self.sgd_sample, float)):
                     sample_rows_idx = random.sample(range(X.shape[0]), round(rows * self.sgd_sample))
