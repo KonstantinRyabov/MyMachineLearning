@@ -1,13 +1,16 @@
 import numpy as np
+import random
 
 class MyLogReg():
-    def __init__(self, n_iter, learning_rate, metric = None, reg = None, l1_coef = 0, l2_coef = 0):
+    def __init__(self, n_iter, learning_rate, sgd_sample = None, random_state = 42, metric = None, reg = None, l1_coef = 0, l2_coef = 0):
         self.n_iter = n_iter
         self.learning_rate = learning_rate
-        self.metric = metric
-        self.reg = reg
         self.l1_coef = l1_coef
         self.l2_coef = l2_coef
+        self.metric = metric
+        self.reg = reg
+        self.random_state = random_state
+        self.sgd_sample = sgd_sample
         self.weights = []
         self.result_metric = 0
         
@@ -41,8 +44,10 @@ class MyLogReg():
             self.result_metric = total / (neg * pos)
     
     def fit(self, X, y, verbose = 0):
+        random.seed(self.random_state)
         X = X.to_numpy()
-        y = y.to_numpy()
+        y_all = y.to_numpy()
+        rows = X.shape[0]
         eps = 1e-15
         # добавляем вектор единиц слева
         X = np.hstack([np.ones((X.shape[0],1)), X])
@@ -51,19 +56,38 @@ class MyLogReg():
         
         log_param = verbose
         for iter in range(1,self.n_iter + 1):
+            
+            # для формирования мини-пакет(Стохастический градиентный спуск)
+            if(self.sgd_sample is not None):
+                if(isinstance(self.sgd_sample, float)):
+                    sample_rows_idx = random.sample(range(X.shape[0]), round(rows * self.sgd_sample))
+                    X_grad = X[sample_rows_idx,:]
+                    y = y_all[sample_rows_idx]
+                else:
+                    sample_rows_idx = random.sample(range(X.shape[0]), self.sgd_sample)
+                    X_grad = X[sample_rows_idx,:]
+                    y = y_all[sample_rows_idx]
+            else:
+                X_grad = X
+                y = y_all
+                
             # предсказываем значение значение
-            z = np.dot(X, self.weights) * -1
+            z = np.dot(X_grad, self.weights) * -1
             y_pred = 1 / (1 + np.exp(z))
-            y_pred_class = np.round(y_pred).astype(int)
             loss = y_pred - y
             n = np.size(y)
             
+            z_all = np.dot(X, self.weights) * -1
+            y_pred_all = 1 / (1 + np.exp(z_all))
+            y_pred_class_all = np.round(y_pred_all).astype(int)
+            n_all = np.size(y_all)
+            
             # метрики
-            alltrue = np.sum(np.where(y == y_pred_class, 1, 0))
-            allpos = np.sum(np.where(y_pred_class == 1, 1, 0))
-            truepos = np.sum(np.where((y_pred_class == 1) & (y == y_pred_class), 1, 0))
-            falseneg = np.sum(np.where((y_pred_class == 0) & (y != y_pred_class), 1, 0))
-            self.__get_metrics(y_pred, y_pred_class, truepos, falseneg, allpos, alltrue, n)
+            alltrue = np.sum(np.where(y_all == y_pred_class_all, 1, 0))
+            allpos = np.sum(np.where(y_pred_class_all == 1, 1, 0))
+            truepos = np.sum(np.where((y_pred_class_all == 1) & (y_all == y_pred_class_all), 1, 0))
+            falseneg = np.sum(np.where((y_pred_class_all == 0) & (y_all != y_pred_class_all), 1, 0))
+            self.__get_metrics(y_pred_all, y_pred_class_all, truepos, falseneg, allpos, alltrue, n)
             
             # регуляризация
             l1_grad = self.l1_coef * np.sign(self.weights)
@@ -79,8 +103,8 @@ class MyLogReg():
                 l_grad = elasticnet_grad
             
             # функция потерь и градиент
-            cost = -1 * np.sum(y * np.log(y_pred + eps) + (1 - y) * np.log(1 - y_pred + eps)) / n
-            grad = np.dot(X.T, loss) * 1 / n + l_grad
+            cost = -1 * np.sum(y_all * np.log(y_pred_all + eps) + (1 - y_all) * np.log(1 - y_pred_all + eps)) / n_all
+            grad = np.dot(X_grad.T, loss) * 1 / n + l_grad
             learning_rate  = self.learning_rate if(isinstance(self.learning_rate, float)) else self.learning_rate(iter)
             self.weights = self.weights - learning_rate * grad
             
