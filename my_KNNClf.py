@@ -1,7 +1,8 @@
 import numpy as np
 
 class MyKNNClf():
-    def __init__(self, k = 0, train_size = (), metric = 'euclidean'):
+    def __init__(self, weight, k = 0, train_size = (), metric = 'euclidean'):
+        self.weight = weight
         self.metric = metric
         self.k = k
         self.train_size = train_size
@@ -33,17 +34,51 @@ class MyKNNClf():
             distanсes[i] = self.__calc_dis(self.metric, self.X, X_test_sample)
         indx = np.argsort(distanсes)[:, :self.k]
         class_predict = self.y[indx]
-        class_one = np.sum(class_predict, axis=1)
-        return class_one
+        distanсes_k = np.sort(distanсes, axis = 1)[:, :self.k]
+        return (class_predict, distanсes_k)
 
     def predict(self, X_test):
-        class_one = self.__calc_predict(X_test)
-        predict = np.where(class_one >= (self.k - class_one), 1, 0)
-        return predict
+        class_predict, distanсes_k = self.__calc_predict(X_test)
+        if self.weight == 'uniform':
+            class_one = np.sum(class_predict, axis=1)
+            predict = np.where(class_one >= (self.k - class_one), 1, 0)
+        elif self.weight == 'rank':
+            rows = class_predict.shape[0]
+            all_rank = np.sum(1 / np.array(range(1, class_predict.shape[1] + 1)))
+            predict = np.empty((rows))
+            for item in  range(rows):
+                weight_one = np.sum(1 / (np.where(class_predict[item] == 1)[0] + 1)) / all_rank
+                weight_zero = np.sum(1 / (np.where(class_predict[item] == 0)[0] + 1)) / all_rank
+                predict[item] = np.where(weight_one > weight_zero, 1, 0)
+        elif self.weight == 'distance':
+            rows = distanсes_k.shape[0]
+            all_distance = np.sum(1 / distanсes_k, axis = 1)
+            predict = np.empty((rows))
+            for item in  range(rows):
+                weight_one = np.sum(1 / distanсes_k[item][(np.where(class_predict[item] == 1)[0])]) / all_distance[item]
+                weight_zero = np.sum(1 / distanсes_k[item][(np.where(class_predict[item] == 0)[0])]) / all_distance[item]
+                predict[item] = np.where(weight_one > weight_zero, 1, 0)
+        return predict.astype(int)
     
     def predict_proba(self, X_test):
-        class_one = self.__calc_predict(X_test)
-        predict_proba = class_one/self.k
+        class_predict, distanсes_k = self.__calc_predict(X_test)
+        if self.weight == 'uniform':
+            class_one = np.sum(class_predict, axis=1)
+            predict_proba = class_one/self.k
+        elif self.weight == 'rank':
+            rows = class_predict.shape[0]
+            all_rank = np.sum(1 / np.array(range(1, class_predict.shape[1] + 1)))
+            predict_proba = np.empty((rows))
+            for item in  range(rows):
+                weight_one = np.sum(1 / (np.where(class_predict[item] == 1)[0] + 1)) / all_rank
+                predict_proba[item] = weight_one
+        elif self.weight == 'distance':
+            rows = distanсes_k.shape[0]
+            all_distance = np.sum(1 / distanсes_k, axis = 1)
+            predict_proba = np.empty((rows))
+            for item in  range(rows):
+                weight_one = np.sum(1 / distanсes_k[item][(np.where(class_predict[item] == 1)[0])]) / all_distance[item]
+                predict_proba[item] = weight_one
         return predict_proba
 
     def __str__(self):  
