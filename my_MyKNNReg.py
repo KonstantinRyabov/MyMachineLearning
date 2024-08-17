@@ -1,7 +1,8 @@
 import numpy as np
 
 class MyKNNReg():
-    def __init__(self, k = 0, train_size = (), metric = 'euclidean'):
+    def __init__(self, weight, k = 0, train_size = (), metric = 'euclidean'):
+        self.weight = weight
         self.metric = metric
         self.k = k
         self.train_size = train_size
@@ -33,12 +34,24 @@ class MyKNNReg():
             distanсes[i] = self.__calc_dis(self.metric, self.X, X_test_sample)
         indx = np.argsort(distanсes)[:, :self.k]
         target = self.y[indx]
-        return target
+        distanсes_k = np.sort(distanсes, axis = 1)[:, :self.k]
+        return (target, distanсes_k)
 
+    
     def predict(self, X_test):
-        target = self.__calc_predict(X_test)
-        mean_target = np.mean(target, axis = 1)
-        return mean_target
+        target, distanсes_k = self.__calc_predict(X_test)
+        if self.weight == 'uniform':
+            mean_target = np.mean(target, axis = 1)
+            return mean_target
+        elif self.weight == 'rank':
+            seq = np.array(range(1, target.shape[1] + 1))
+            all_rank = np.sum(1 / seq)
+            weight_rank = (1 / seq) / all_rank
+            return np.sum(weight_rank * target)
+        elif self.weight == 'distance':
+            all_distance = np.sum(1 / distanсes_k, axis = 1)[:, np.newaxis]
+            weight_dis = (1 / distanсes_k) / all_distance
+            return np.sum(weight_dis * target, axis = 1)
 
     def __str__(self):  
         return f"MyKNNClf class: k={self.k}"
