@@ -21,10 +21,31 @@ class MyKMeans():
         centroids = np.empty((self.n_clusters, m))
         min = np.min(X, axis=0)
         max = np.max(X, axis=0)
-        for item in range(self.n_clusters):
-            centroids[item] = np.random.uniform(min, max)
-        distanсes = np.empty((self.n_clusters, n))
-        for i in range(self.n_clusters):
-            centroid_sample = np.full((n, m), centroids[i])
-            distanсes[i] = self.__calc_dis(X, centroid_sample)
-        indx = np.argmin(distanсes)
+        wcss_arr = np.empty((self.n_init))
+        centroids_arr = np.empty((self.n_init, self.n_clusters, m))
+        for i in range(self.n_init):
+            for item in range(self.n_clusters):
+                centroids[item] = np.random.uniform(min, max)
+            for _ in range(self.max_iter):
+                distanсes = np.empty((self.n_clusters, n))
+                for i in range(self.n_clusters):
+                    centroid_sample = np.full((n, m), centroids[i])
+                    distanсes[i] = self.__calc_dis(X, centroid_sample)
+                indx = np.argmin(distanсes)
+
+                centroids_temp = np.empty((self.n_clusters, m))
+                wcss = 0
+                for item in range(self.n_clusters):
+                    cluster = X[np.where(indx == item)]
+                    n_cl,m_cl = cluster.shape
+                    centroids_temp[item] = np.mean(cluster, axis = 0)
+                    centroid_sample = np.full((n_cl, m_cl), centroids_temp[item])
+                    dis_sum = np.sum(np.power(self.__calc_dis(cluster, centroid_sample), 2), axis = 0)
+                    wcss = wcss + dis_sum
+                wcss_arr[i] = wcss
+                if np.array_equal(centroids, centroids_temp):
+                    centroids = centroids_temp
+                    break
+                centroids = centroids_temp
+                
+                centroids_arr[i] = centroids
