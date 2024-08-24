@@ -53,3 +53,6 @@ class MyKMeans():
         min_index = np.argmin(wcss_arr)
         self.inertia_ = wcss_arr[min_index]
         self.cluster_centers_ = centroids_arr[min_index]
+    #
+    def predict(self, X):
+        return self.__closest_centroid(X.to_numpy(), self.cluster_centers_)
